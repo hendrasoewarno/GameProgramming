@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird SVG</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; }
+        svg { background-color: skyblue; }
+    </style>
+</head>
+<body>
+    <h1>Flappy Bird SVG</h1>
+    <svg id="game" width="400" height="500" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="skyblue" />
+        <circle id="bird" cx="100" cy="250" r="15" fill="yellow" />
+    </svg>
+    <p>Press Space to Jump</p>
+    <script>
+        let svg = document.getElementById("game");
+        let bird = document.getElementById("bird");
+        let gravity = 0.10, velocity = 0;
+        let isGameOver = false;
+        let pipes = [];
+        let score = 0;
+
+        function jump() {
+            if (!isGameOver) velocity = -2;
+        }
+
+        function createPipe() {
+            let gap = 120, pipeWidth = 50;
+            let topHeight = Math.random() * (300 - gap) + 50;
+            let bottomY = topHeight + gap;
+
+            let topPipe = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            topPipe.setAttribute("x", 400);
+            topPipe.setAttribute("y", 0);
+            topPipe.setAttribute("width", pipeWidth);
+            topPipe.setAttribute("height", topHeight);
+            topPipe.setAttribute("fill", "green");
+            svg.appendChild(topPipe);
+
+            let bottomPipe = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bottomPipe.setAttribute("x", 400);
+            bottomPipe.setAttribute("y", bottomY);
+            bottomPipe.setAttribute("width", pipeWidth);
+            bottomPipe.setAttribute("height", 500 - bottomY);
+            bottomPipe.setAttribute("fill", "green");
+            svg.appendChild(bottomPipe);
+
+            pipes.push({ topPipe, bottomPipe, x: 400});
+        }
+
+        function update() {
+            if (isGameOver) return;
+            velocity += gravity;
+            let newY = parseFloat(bird.getAttribute("cy")) + velocity;
+            if (newY >= 485 || newY <= 15) gameOver();
+            bird.setAttribute("cy", newY);
+
+            pipes.forEach(pipe => {
+                pipe.x -= 5;
+                pipe.topPipe.setAttribute("x", pipe.x);
+                pipe.bottomPipe.setAttribute("x", pipe.x);
+                
+                if (pipe.x < 85 && pipe.x > 65) {
+                    let birdY = parseFloat(bird.getAttribute("cy"));
+                    if (birdY < parseFloat(pipe.topPipe.getAttribute("height")) || 
+                        birdY > parseFloat(pipe.bottomPipe.getAttribute("y"))) {
+                        gameOver();
+                    }
+                }
+            });
+            pipes = pipes.filter(pipe => pipe.x > -50);
+            requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            alert("Game Over! Score: " + score);
+            location.reload();
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if (e.code === "Space") jump();
+        });
+
+        setInterval(createPipe, 2000);
+        update();
+    </script>
+</body>
+</html>
