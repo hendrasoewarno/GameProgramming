@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Pong Sederhana</title>
+    <style>
+	     body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            background: black;
+            display: block;
+            margin: auto;
+        }
+		#score {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: white;
+        }
+		#startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }	
+    </style>
+</head>
+<body>
+	<div id="score">Player: 0 | AI: 0</div>
+	<button id="startButton">Start Game</button>
+    <canvas id="pongCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById("pongCanvas");
+		const scoreText = document.getElementById("score");
+		const hitSound = new Audio("assets/sonarping-38269");
+		
+        const ctx = canvas.getContext("2d");
+				
+		function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+		//goto fullscreen mode
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        // Paddle
+        const paddleWidth = 10, paddleHeight = 80;
+        let playerY = (canvas.height - paddleHeight) / 2;
+        let aiY = (canvas.height - paddleHeight) / 2;
+        let paddleSpeed = 5;
+
+        // Ball
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        let ballRadius = 8;
+        let ballSpeedX = 5, ballSpeedY = 5;
+		// ball velocity change
+		let speedIncrement = 0.05;
+		
+		//Players Score
+		let playerScore = 0;
+        let aiScore = 0;
+
+        // Input
+        document.addEventListener("mousemove", (e) => {
+            let rect = canvas.getBoundingClientRect();
+            playerY = e.clientY - rect.top - paddleHeight / 2;
+        });
+
+        function drawRect(x, y, width, height, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+        }
+
+        function drawBall(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballSpeedX = -ballSpeedX;
+        }
+		
+		function updateScore() {
+            scoreText.innerText = `Player: ${playerScore} | AI: ${aiScore}`;
+			ballSpeedX *= (1+speedIncrement*(playerScore));
+			ballSpeedY *= (1+speedIncrement*(playerScore));
+			paddleSpeed *= (1+speedIncrement*(playerScore));
+        }
+		
+		let gameOver = false;
+
+        function update() {
+            // Move ball
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Ball collision with top and bottom
+            if (ballY - ballRadius < 0 || ballY + ballRadius > canvas.height) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // AI movement
+            if (aiY + paddleHeight / 2 < ballY) {
+                aiY += paddleSpeed;
+            } else {
+                aiY -= paddleSpeed;
+            }
+
+            // Ball collision with paddles
+            if (ballX - ballRadius < paddleWidth && ballY > playerY && ballY < playerY + paddleHeight) {
+				//update player score
+				playerScore++;
+				hitSound.play().catch(error => console.log("Audio play blocked:", error));
+				updateScore();
+                ballSpeedX = -ballSpeedX;
+            }
+
+            if (ballX + ballRadius > canvas.width - paddleWidth && ballY > aiY && ballY < aiY + paddleHeight) {
+				//update ai score
+				aiScore++;
+				updateScore();
+                ballSpeedX = -ballSpeedX;
+            }
+
+            // Check if ball goes out of bounds
+            if (ballX - ballRadius < 0) {
+				gameOver = true;
+			}
+			else if (ballX + ballRadius > canvas.width) {
+                resetBall();
+            }
+        }
+
+        function draw() {
+            drawRect(0, 0, canvas.width, canvas.height, "black");
+            drawRect(0, playerY, paddleWidth, paddleHeight, "white");
+            drawRect(canvas.width - paddleWidth, aiY, paddleWidth, paddleHeight, "white");
+            drawBall(ballX, ballY, ballRadius, "white");
+        }		
+		
+		let animationId = 0;
+
+        function gameLoop() {
+			if (!gameOver) {
+				update();
+				draw();
+				animationId = requestAnimationFrame(gameLoop);
+			}
+			else {
+				cancelAnimationFrame(animationId);
+				alert("GameOver");
+			}
+        }
+
+        startButton.addEventListener("click", () => {
+            gameRunning = true;
+            startButton.style.display = "none";
+            canvas.style.display = "block";
+            scoreText.style.display = "block";
+            gameLoop();
+        });
+    </script>
+</body>
+</html>
