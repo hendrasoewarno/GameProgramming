@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Game</title>
+    <style>
+        body { text-align: center; }
+        canvas { background-color: #000; display: block; margin: auto; }
+    </style>
+</head>
+<body>
+
+<canvas id="pacmanCanvas" width="600" height="600"></canvas>
+
+<script>
+    // Setup Canvas and Context
+    const canvas = document.getElementById("pacmanCanvas");
+    const ctx = canvas.getContext("2d");
+    const gridSize = 20;  // grid size for game objects (pellets, Pac-Man, ghosts)
+    const pacManRadius = 10;  // Pac-Man radius size
+    
+    // Initialize Pac-Man (Position and Speed)
+    let pacMan = { x: 300, y: 300, dx: 0, dy: 0 };
+
+    // Initialize Ghosts (positions, speed)
+    let ghosts = [
+        { x: 100, y: 100, dx: 1, dy: 0 },
+        { x: 500, y: 100, dx: -1, dy: 0 },
+        { x: 100, y: 500, dx: 0, dy: 1 },
+        { x: 500, y: 500, dx: 0, dy: -1 }
+    ];
+
+    // Pellets (dots Pac-Man eats)
+    let pellets = [];
+    for (let y = 20; y <= canvas.height - 20; y += gridSize) {
+        for (let x = 20; x <= canvas.width - 20; x += gridSize) {
+            pellets.push({ x, y });
+        }
+    }
+
+    // Game Loop
+    function gameLoop() {
+        // Update Pac-Man's position
+        pacMan.x += pacMan.dx;
+        pacMan.y += pacMan.dy;
+        
+        // Handle boundaries (Pac-Man should wrap around)
+        if (pacMan.x < 0) pacMan.x = canvas.width;
+        if (pacMan.x > canvas.width) pacMan.x = 0;
+        if (pacMan.y < 0) pacMan.y = canvas.height;
+        if (pacMan.y > canvas.height) pacMan.y = 0;
+
+        // Draw game objects
+        drawGame();
+        
+        // Check for collision with pellets
+        checkPelletCollision();
+
+        // Move Ghosts
+        moveGhosts();
+
+        // Delay the game loop by 200ms
+		setTimeout(() => {
+			//repeat gameLoop
+			requestAnimationFrame(gameLoop);
+		}, 200);
+    }
+	
+    // Draw Pac-Man and Ghosts
+    function drawGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);  // Clear canvas
+        
+        // Draw Pac-Man
+        ctx.beginPath();
+        ctx.arc(pacMan.x, pacMan.y, pacManRadius, 0.2 * Math.PI, 1.8 * Math.PI);  // Mouth of Pac-Man
+        ctx.lineTo(pacMan.x, pacMan.y);
+        ctx.fillStyle = "yellow";
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw Ghosts
+        ghosts.forEach(ghost => {
+            ctx.beginPath();
+            ctx.arc(ghost.x, ghost.y, pacManRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = "red";
+            ctx.fill();
+            ctx.stroke();
+        });
+
+        // Draw Pellets
+        pellets.forEach(pellet => {
+            ctx.beginPath();
+            ctx.arc(pellet.x, pellet.y, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = "white";
+            ctx.fill();
+        });
+    }
+
+    // Pac-Man move control using arrow keys
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "ArrowUp") {
+            pacMan.dx = 0; pacMan.dy = -gridSize;
+        }
+        if (event.key === "ArrowDown") {
+            pacMan.dx = 0; pacMan.dy = gridSize;
+        }
+        if (event.key === "ArrowLeft") {
+            pacMan.dx = -gridSize; pacMan.dy = 0;
+        }
+        if (event.key === "ArrowRight") {
+            pacMan.dx = gridSize; pacMan.dy = 0;
+        }
+    });
+
+    // Handle collision with pellets (eat them)
+    function checkPelletCollision() {
+        for (let i = pellets.length - 1; i >= 0; i--) {
+            let pellet = pellets[i];
+            let dx = pacMan.x - pellet.x;
+            let dy = pacMan.y - pellet.y;
+            if (Math.sqrt(dx * dx + dy * dy) < pacManRadius + 4) {  // If Pac-Man collides with pellet
+                pellets.splice(i, 1);  // Remove the pellet
+            }
+        }
+    }
+	
+    // Move Ghosts (simple movement towards Pac-Man)
+    function moveGhosts() {
+		ghosts.forEach(ghost => {
+			let dx = pacMan.x - ghost.x;
+			let dy = pacMan.y - ghost.y;
+			let distance = Math.sqrt(dx * dx + dy * dy);
+
+			// Normalize the direction (ghost moves in a straight line towards Pac-Man)
+			ghost.dx = (dx / distance) * gridSize / 2;
+			ghost.dy = (dy / distance) * gridSize / 2;
+			
+			if (Math.floor(Math.random() * 10)>0)
+				ghost.x += ghost.dx;
+			else
+				ghost.x -= ghost.dx;
+				
+			if (Math.floor(Math.random() * 10)>0)
+				ghost.y += ghost.dy;
+			else
+				ghost.y -= ghost.dy;			
+		});
+		ghostFrameCounter = 0;
+    }
+
+    // Start the game
+    gameLoop();
+	
+</script>
+</body>
+</html>
