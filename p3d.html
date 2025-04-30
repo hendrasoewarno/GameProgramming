@@ -13,32 +13,33 @@
     <h1>Flappy Bird SVG</h1>
     <svg id="game" width="400" height="500" xmlns="http://www.w3.org/2000/svg">
         <rect width="100%" height="100%" fill="skyblue" />
-        <circle id="bird" cx="100" cy="250" r="15" fill="yellow" />
+        <g id="bird" transform="translate(50, 250)">
+			<circle cx="0" cy="0" r="15" fill="yellow" stroke="orange" stroke-width="3"/>
+			<circle cx="10" cy="-5" r="5" fill="white" stroke="black" stroke-width="2"/>
+			<circle cx="12" cy="-5" r="2" fill="black"/>
+			<polygon points="15,0 30,-5 30,5" fill="orange"/>
+			<ellipse cx="-10" cy="5" rx="10" ry="5" fill="lightyellow" stroke="orange" stroke-width="2"/>
+		</g>
     </svg>
     <p>Press Space to Jump</p>
     <script>
         let svg = document.getElementById("game");
         let bird = document.getElementById("bird");
+		let birdY = 250;
         let gravity = 0.10, velocity = 0;
         let isGameOver = false;
         let pipes = [];
         let score = 0;
 
         function jump() {
-			//velocity -2 artinya flappy bird naik ke atas
             if (!isGameOver) velocity = -2;
         }
 
-		//buat pipa atas dan bawah
         function createPipe() {
-			//celah 120 pixel dan lebar pipa 50 pixedl
             let gap = 120, pipeWidth = 50;
-			//buat pipa atas dengan ketinggian random (180) + 50
             let topHeight = Math.random() * (300 - gap) + 50;
-			//pipa bawah mulai dari topHeight + 120 pixel (celah pipa atas dan bawah)
             let bottomY = topHeight + gap;
 
-			//buat object SVG pipa atas
             let topPipe = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             topPipe.setAttribute("x", 400);
             topPipe.setAttribute("y", 0);
@@ -47,7 +48,6 @@
             topPipe.setAttribute("fill", "green");
             svg.appendChild(topPipe);
 
-			//buat object SVG pipa bawah
             let bottomPipe = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             bottomPipe.setAttribute("x", 400);
             bottomPipe.setAttribute("y", bottomY);
@@ -56,45 +56,38 @@
             bottomPipe.setAttribute("fill", "green");
             svg.appendChild(bottomPipe);
 
-			//tambahkan ke array
-            pipes.push({ topPipe, bottomPipe, x: 400});
+			// add counted for scoring
+            pipes.push({ topPipe, bottomPipe, x: 400, value:1});
         }
 
         function update() {
             if (isGameOver) return;
-			
             velocity += gravity;
+			birdY += velocity;			
+            
+			if (birdY >= 485 || birdY <= 15) gameOver();
 			
-			//hitung newY untuk flappy bird
-            let newY = parseFloat(bird.getAttribute("cy")) + velocity;
-			
-			//jika flappy bird menyentuh bawas bawah dan atas, maka gameover
-            if (newY >= 485 || newY <= 15) gameOver();
-			
-			//pindahkan posisi flappy bird ke koordinat newY
-            bird.setAttribute("cy", newY);
+            bird.setAttribute("transform", `translate(50, ${birdY}) rotate(${velocity * 3})`);
 
-			//mengerakan masing-masing pipa ke kiri
             pipes.forEach(pipe => {
                 pipe.x -= 5;
                 pipe.topPipe.setAttribute("x", pipe.x);
                 pipe.bottomPipe.setAttribute("x", pipe.x);
                 
-				//jika pipa sudah menghampiri flappy bird (100-15)
                 if (pipe.x < 85 && pipe.x > 65) {
-                    let birdY = parseFloat(bird.getAttribute("cy"));
-					// jika bird diatas celah atau dibawah celah, maka gameOver
                     if (birdY < parseFloat(pipe.topPipe.getAttribute("height")) || 
                         birdY > parseFloat(pipe.bottomPipe.getAttribute("y"))) {
                         gameOver();
                     }
+					else {
+						// add counted to score
+						score += pipe.value;
+						// reset value to 0
+						pipe.value = 0;
+					}
                 }
             });
-			
-			//hapus array untuk pipa yang sudah memasuki area non-visible dikiri, dimana x=-50
             pipes = pipes.filter(pipe => pipe.x > -50);
-			
-			//ulangi animasi
             requestAnimationFrame(update);
         }
 
@@ -104,7 +97,6 @@
             location.reload();
         }
 
-		//user tekan space maka jump
         document.addEventListener("keydown", (e) => {
             if (e.code === "Space") jump();
         });
