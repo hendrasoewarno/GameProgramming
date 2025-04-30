@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Sound Generator</title>
+</head>
+<body>
+
+    <h1>Click the Button to Play Sound</h1>
+    <button onclick="playSound()">Play Sound</button>
+
+    <script>
+        function playSound() {
+            // Create an AudioContext
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            // Create an oscillator (sound generator)
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = "sine"; // Sound type: sine, square, sawtooth, triangle
+            oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note (440 Hz)
+
+            // Connect to the speakers
+            oscillator.connect(audioContext.destination);
+
+            // Start and stop the sound
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 1); // Play for 1 second
+        }
+    </script>
+
+</body>
+</html>
