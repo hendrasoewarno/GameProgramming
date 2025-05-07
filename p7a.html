@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Canvas Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: lightblue;
+        }
+        canvas {
+            border: 2px solid black;
+            background-color: skyblue;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        document.body.appendChild(canvas);
+
+        canvas.width = 800;
+        canvas.height = 400;
+
+        // Game variables
+        const gravity = 0.5;
+        let keys = {};
+
+        // Mario object
+        let mario = {
+            x: 50,
+            y: 250,
+            width: 40,
+            height: 60,
+            dx: 0,
+            dy: 0,
+            speed: 3,
+            jumping: false
+        };
+
+        // Ada 3 platforms
+        let platforms = [
+            { x: 0, y: 350, width: 800, height: 50 }, //tanah
+            { x: 200, y: 280, width: 100, height: 10 },
+            { x: 400, y: 220, width: 100, height: 10 }
+        ];
+
+        // Merekan event pada keyboard dan aktifkan nilai key berdasarkan masing-masing keycode
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function update() {
+            // Horizontal movement
+            if (keys['ArrowRight']) mario.dx = mario.speed; //maju ke kanan
+            else if (keys['ArrowLeft']) mario.dx = -mario.speed; //maju ke kiri
+            else mario.dx = 0;
+
+            // Jumping
+            if (keys['Space'] && !mario.jumping) {
+                mario.dy = -10; //nilai dy berkurang
+                mario.jumping = true;
+            }
+
+            // Apply gravity
+            mario.dy += gravity;
+
+            // Update position
+            mario.x += mario.dx;
+            mario.y += mario.dy;
+
+            // Apakah terjadi collision pada salah satu platform, jika ya maka nilai dy=0
+            platforms.forEach(platform => {
+                if (mario.y + mario.height > platform.y &&
+                    mario.y + mario.height - mario.dy <= platform.y &&
+                    mario.x + mario.width > platform.x &&
+                    mario.x < platform.x + platform.width) {
+					mario.y = platform.y - mario.height;
+                    mario.dy = 0; //batalkan Apply gravitasi
+                    mario.jumping = false;
+                }
+            });
+
+            // Mencegah mario jatuh dari tanah
+            if (mario.y + mario.height > canvas.height) {
+                mario.y = canvas.height - mario.height;
+                mario.dy = 0;
+                mario.jumping = false;
+            }
+        }
+
+		//Menggambar Mario dengan Shape
+        function drawMario() {
+            // Draw head
+            ctx.fillStyle = 'red';
+            ctx.fillRect(mario.x + 10, mario.y, 20, 20);
+            
+            // Draw body
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(mario.x, mario.y + 20, 40, 30);
+            
+            // Draw legs
+            ctx.fillStyle = 'brown';
+            ctx.fillRect(mario.x, mario.y + 50, 15, 10);
+            ctx.fillRect(mario.x + 25, mario.y + 50, 15, 10);
+        }
+
+		// masing-masing object ke canvas
+        function draw() {
+			//hapus canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Mario
+            drawMario();
+            
+            // Draw platforms
+            ctx.fillStyle = 'brown';
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+		// animasi game
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
