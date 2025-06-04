@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Canvas Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: lightblue;
+        }
+        canvas {
+            border: 2px solid black;
+            background-color: skyblue;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        document.body.appendChild(canvas);
+
+        canvas.width = 800;
+        canvas.height = 400;
+
+        // Load Mario sprite sheet
+        const marioSpriteSheet = new Image();
+        marioSpriteSheet.src = 'assets/mario-characters.gif';
+
+		// Mario sprite data
+		const marioSprites = {
+			idle: { x: 276, y: 44, width: 16, height: 16 },
+			run: [
+				{ x: 290, y: 44, width: 16, height: 16 },
+				{ x: 304, y: 44, width: 16, height: 16 },
+				{ x: 321, y: 44, width: 16, height: 16 }
+			],
+			jump: { x: 355, y: 44, width: 16, height: 16 }
+		};
+
+        // Game variables
+        const gravity = 0.5;
+        let keys = {};
+        let frameIndex = 0;
+        let frameCounter = 0;
+
+        // Mario object
+        let mario = {
+            x: 50,
+            y: 300,
+            width: 32,
+            height: 32,
+            dx: 0,
+            dy: 0,
+            speed: 3,
+			facing: 'right',
+            jumping: false,
+            currentSprite: marioSprites.idle
+        };
+		
+        // Goomba object
+        let goomba = {
+            x: 500,
+            y: 320,
+            width: 30,
+            height: 30,
+            dx: -1.5, // Movement speed
+            alive: true
+        };		
+
+        // Platforms
+        let platforms = [
+            { x: 0, y: 350, width: 800, height: 50 },
+            { x: 200, y: 280, width: 100, height: 10 },
+            { x: 400, y: 220, width: 100, height: 10 }
+        ];
+
+		// Key events
+		window.addEventListener('keydown', (e) => keys[e.code] = true);
+		window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function update() {
+			// Horizontal movement
+			if (keys['ArrowRight']) {
+				mario.dx = mario.speed;
+				mario.facing = 'right';
+				frameCounter++;
+				if (frameCounter % 10 === 0) {
+					frameIndex = (frameIndex + 1) % marioSprites.run.length;
+				}
+				mario.currentSprite = marioSprites.run[frameIndex];
+			} else if (keys['ArrowLeft']) {
+				mario.dx = -mario.speed;
+				mario.facing = 'left';
+				frameCounter++;
+				if (frameCounter % 10 === 0) {
+					frameIndex = (frameIndex + 1) % marioSprites.run.length;
+				}
+				mario.currentSprite = marioSprites.run[frameIndex];
+			} else {
+				mario.dx = 0;
+				mario.currentSprite = marioSprites.idle;
+			}
+
+			// Jumping
+			if (keys['Space'] && !mario.jumping) {
+				mario.dy = -10;
+				mario.jumping = true;
+				mario.currentSprite = marioSprites.jump;
+			}
+
+            // Apply gravity
+            mario.dy += gravity;
+
+            // Update position
+            mario.x += mario.dx;
+            mario.y += mario.dy;
+
+            // Collision with platforms
+            platforms.forEach(platform => {
+                if (mario.y + mario.height > platform.y &&
+                    mario.y + mario.height - mario.dy <= platform.y &&
+                    mario.x + mario.width > platform.x &&
+                    mario.x < platform.x + platform.width) {
+                    mario.y = platform.y - mario.height;
+                    mario.dy = 0;
+                    mario.jumping = false;
+                }
+            });
+
+            // Prevent falling off the canvas
+            if (mario.y + mario.height > canvas.height) {
+                mario.y = canvas.height - mario.height;
+                mario.dy = 0;
+                mario.jumping = false;
+            }
+			
+            // Goomba movement
+            if (goomba.alive) {
+                goomba.x += goomba.dx;
+
+                // Reverse direction at edges
+                if (goomba.x <= 0 || goomba.x + goomba.width >= canvas.width) {
+                    goomba.dx *= -1;
+                }
+
+                // Check collision with Mario
+                if (mario.x + mario.width > goomba.x &&
+                    mario.x < goomba.x + goomba.width &&
+                    mario.y + mario.height > goomba.y &&
+                    mario.y < goomba.y + goomba.height) {
+                    
+                    // Mario lands on Goomba
+                    if (mario.y + mario.height - mario.dy <= goomba.y) {
+                        goomba.alive = false; // Goomba dies
+                        mario.dy = -8; // Mario bounces up
+                    } else {
+                        // Mario collides with Goomba from the side (game over logic can be added)
+                        console.log("Game Over! Mario hit the Goomba.");
+                    }
+                }
+            }			
+        }
+
+		function drawMario() {
+			ctx.save();
+			if (mario.facing=='right') {
+				ctx.drawImage(
+					marioSpriteSheet,
+					mario.currentSprite.x, mario.currentSprite.y,
+					mario.currentSprite.width, mario.currentSprite.height,
+					mario.x, mario.y,
+					mario.width, mario.height
+				);
+			}
+			else {
+				ctx.scale(-1, 1);
+				ctx.drawImage(
+					marioSpriteSheet,
+					mario.currentSprite.x, mario.currentSprite.y,
+					mario.currentSprite.width, mario.currentSprite.height,
+					-mario.x - mario.width, mario.y,
+					mario.width, mario.height
+				);
+			}
+			ctx.restore();
+		}
+		
+		function drawGoomba() {
+            if (goomba.alive) {
+                ctx.fillStyle = 'brown';
+                ctx.fillRect(goomba.x, goomba.y, goomba.width, goomba.height);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Mario
+            drawMario();
+			
+            // Draw Goomba
+            drawGoomba();			
+            
+            // Draw platforms
+            ctx.fillStyle = 'brown';
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
