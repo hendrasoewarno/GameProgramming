@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mario Canvas Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: lightblue;
+        }
+        canvas {
+            border: 2px solid black;
+            background-color: skyblue;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        document.body.appendChild(canvas);
+
+        canvas.width = 800;
+        canvas.height = 400;
+		
+		// Load Mario tile sheet
+		const groundSprite = new Image();
+		groundSprite.src = 'assets/mario-tiles.png';		
+
+        // Load Mario sprite sheet
+        const marioSpriteSheet = new Image();
+        marioSpriteSheet.src = 'assets/mario-characters.gif';
+		
+		// Ground sprite data
+		const tilesSprites = {
+			ground: { x: 0, y: 0, width: 16, height: 16 },
+			brick: { x: 16, y: 0, width: 16, height: 16 }
+		};		
+
+		// Mario sprite data
+		const marioSprites = {
+			idle: { x: 276, y: 44, width: 16, height: 16 },
+			run: [
+				{ x: 290, y: 44, width: 16, height: 16 },
+				{ x: 304, y: 44, width: 16, height: 16 },
+				{ x: 321, y: 44, width: 16, height: 16 }
+			],
+			jump: { x: 355, y: 44, width: 16, height: 16 }
+		};
+		
+		// Gomba sprite data
+		const goombaSprites = {
+			walk: [{ x:296, y:187, width: 16, height: 16 },
+				{ x:315, y:187, width: 16, height: 16 }],
+			flat: { x:277, y:187, width: 16, height: 16 }
+		};
+
+        // Game variables
+        const gravity = 0.5;
+        let keys = {};
+        let frameIndex = 0;
+        let frameCounter = 0;
+		
+        // Mario object
+        let mario = {
+            x: 50,
+            y: 300,
+            width: 32,
+            height: 32,
+            dx: 0,
+            dy: 0,
+            speed: 3,
+			facing: 'right',
+            jumping: false,
+            currentSprite: marioSprites.idle
+        };
+		
+        // Goomba object
+        let goomba = {
+            x: 500,
+            y: 320,
+            width: 30,
+            height: 30,
+			facing: 'left',
+            dx: -1.5, // Movement speed
+            alive: 10,
+			frameIndex: 0,
+			frameCounter: 0,
+			currentSprite: goombaSprites.walk[0],
+			value: 100
+        };		
+
+        // Platforms
+        let platforms = [
+            { x: 0, y: 350, width: 1600, height: 50, currentSprite: tilesSprites.ground },
+            { x: 200, y: 280, width: 96, height: 16, currentSprite: tilesSprites.brick },
+            { x: 400, y: 220, width: 96, height: 16, currentSprite: tilesSprites.brick },
+			{ x: 1200, y: 280, width: 96, height: 16, currentSprite: tilesSprites.brick },
+            { x: 1400, y: 220, width: 96, height: 16, currentSprite: tilesSprites.brick }			
+        ];
+		
+		// Game State
+		let isPaused = false;
+		let score = 0;
+		let gameOver = false;
+		
+		// Key events
+		window.addEventListener('keydown', (e) => {		
+		    if (e.code === 'Escape') {
+				isPaused = !isPaused;
+			} else if (isPaused && e.code === 'F1') {
+				saveGame();
+			} else if (isPaused && e.code === 'F2') {
+				loadGame();
+			} else {
+				keys[e.code] = true;
+			}
+		}
+		
+		);
+		window.addEventListener('keyup', (e) => keys[e.code] = false);
+		
+		// Camera
+        let cameraX = 0; // Camera position
+
+        function update() {
+			if (gameOver || isPaused) return; // Stop updates if game is over
+			
+			// Horizontal movement
+			if (keys['ArrowRight']) {
+				mario.dx = mario.speed;
+				mario.facing = 'right';
+				frameCounter++;
+				if (frameCounter % 10 === 0) {
+					frameIndex = (frameIndex + 1) % marioSprites.run.length;
+				}
+				mario.currentSprite = marioSprites.run[frameIndex];
+			} else if (keys['ArrowLeft']) {
+				mario.dx = -mario.speed;
+				mario.facing = 'left';
+				frameCounter++;
+				if (frameCounter % 10 === 0) {
+					frameIndex = (frameIndex + 1) % marioSprites.run.length;
+				}
+				mario.currentSprite = marioSprites.run[frameIndex];
+			} else {
+				mario.dx = 0;
+				mario.currentSprite = marioSprites.idle;
+			}
+
+			// Jumping
+			if (keys['Space'] && !mario.jumping) {
+				mario.dy = -10;
+				mario.jumping = true;
+				mario.currentSprite = marioSprites.jump;
+			}
+
+            // Apply gravity
+            mario.dy += gravity;
+
+            // Update position
+            mario.x += mario.dx;
+            mario.y += mario.dy;
+
+            // Collision with platforms
+            platforms.forEach(platform => {
+                if (mario.y + mario.height > platform.y &&
+                    mario.y + mario.height - mario.dy <= platform.y &&
+                    mario.x + mario.width > platform.x &&
+                    mario.x < platform.x + platform.width) {
+                    mario.y = platform.y - mario.height;
+                    mario.dy = 0;
+                    mario.jumping = false;
+                }
+            });
+
+            // Prevent falling off the canvas
+            if (mario.y + mario.height > canvas.height) {
+                mario.y = canvas.height - mario.height;
+                mario.dy = 0;
+                mario.jumping = false;
+            }
+			
+            // Goomba movement
+            if (goomba.alive > 9) {
+                goomba.x += goomba.dx;
+				
+				goomba.frameCounter++;
+				if (goomba.frameCounter % 10 === 0) {
+					goomba.frameIndex = (goomba.frameIndex + 1) % goombaSprites.walk.length;
+				}
+				
+				goomba.currentSprite = goombaSprites.walk[goomba.frameIndex];
+
+                // Reverse direction at edges
+                if (goomba.x <= 0 || goomba.x + goomba.width >= platforms[0].width) {
+                    goomba.dx *= -1;
+                }
+
+                // Check collision with Mario
+                if (mario.x + mario.width > goomba.x &&
+                    mario.x < goomba.x + goomba.width &&
+                    mario.y + mario.height > goomba.y &&
+                    mario.y < goomba.y + goomba.height) {
+                    
+                    // Mario lands on Goomba
+                    if (mario.y + mario.height - mario.dy <= goomba.y) {
+						goomba.alive = 9; // Goomba dies
+						goomba.currentSprite = goombaSprites.flat; //Goomba animation
+                        mario.dy = -8; // Mario bounces up
+						score += goomba.value; // Increase score by 100
+                    } else {
+                        // Mario collides with Goomba from the side (game over logic can be added)
+                        gameOver = true;
+                    }
+                }
+            }
+
+            // Camera follows Mario
+            let center = canvas.width / 2;
+            if (mario.x > center && mario.x < platforms[0].width - center) {
+                cameraX = mario.x - center;
+            }			
+        }
+		
+		// convert objectX to screenX base on cameraX
+		function toScreenX(x) {
+			return x - cameraX;
+		}
+
+		function drawMario() {
+			ctx.save();
+			if (mario.facing=='right') {
+				ctx.drawImage(
+					marioSpriteSheet,
+					mario.currentSprite.x, mario.currentSprite.y,
+					mario.currentSprite.width, mario.currentSprite.height,
+					toScreenX(mario.x), mario.y,
+					mario.width, mario.height
+				);
+			}
+			else {
+				ctx.scale(-1, 1);
+				ctx.drawImage(
+					marioSpriteSheet,
+					mario.currentSprite.x, mario.currentSprite.y,
+					mario.currentSprite.width, mario.currentSprite.height,
+					-toScreenX(mario.x) - mario.width, mario.y,
+					mario.width, mario.height
+				);
+			}
+			ctx.restore();
+		}
+		
+		function drawGoomba() {
+            if (goomba.alive > 0) {
+				ctx.drawImage(
+					marioSpriteSheet,
+					goomba.currentSprite.x, goomba.currentSprite.y,
+					goomba.currentSprite.width, goomba.currentSprite.height,
+					toScreenX(goomba.x), goomba.y,
+					goomba.width, goomba.height
+				);
+				if (goomba.alive < 10)
+					goomba.alive--; // Goomba until disappear
+            }
+        }	
+		
+		function drawPlatform(platform) {		    
+			const tilesCountX = Math.ceil(platform.width / platform.currentSprite.width);
+			const tilesCountY = Math.ceil(platform.height / platform.currentSprite.height);
+
+			for (let i = 0; i < tilesCountX; i++) {
+				for (let j = 0; j < tilesCountY; j++) {
+					ctx.drawImage(
+						groundSprite, 
+						platform.currentSprite.x, platform.currentSprite.y, // Source x, y from sprite sheet
+						platform.currentSprite.width, platform.currentSprite.height, // Source width, height
+						toScreenX(platform.x + i * platform.currentSprite.width), platform.y + j * platform.currentSprite.height, // Destination x, y
+						platform.currentSprite.width, platform.currentSprite.height // Destination width, height
+					);
+				}
+			}		
+		}
+		
+		function drawScore() {
+			ctx.fillStyle = "white";
+			ctx.font = "24px Arial";
+			ctx.fillText("Score: " + score, 20, 30);
+		}
+
+		function drawGameOver() {
+			ctx.fillStyle = "red";
+			ctx.font = "40px Arial";
+			ctx.fillText("GAME OVER", canvas.width / 2 - 100, canvas.height / 2);
+		}		
+		
+		function drawPauseMenu() {
+		    // Pause Menu
+			if (isPaused) {
+				ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+				ctx.fillRect(200, 100, 400, 200);
+				
+				ctx.fillStyle = 'white';
+				ctx.font = '24px Arial';
+				ctx.fillText('Game Paused', 320, 150);
+				ctx.fillText('Press F1 to Save', 300, 190);
+				ctx.fillText('Press F2 to Load', 300, 230);
+				ctx.fillText('Press Esc to Resume', 290, 270);
+			}		
+		}
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Mario
+            drawMario();
+			
+            // Draw Goomba
+            drawGoomba();			
+            
+            // Draw platforms
+            ctx.fillStyle = 'brown';
+            platforms.forEach(platform => {
+                drawPlatform(platform);
+            });
+			
+			// Draw score
+			drawScore();
+			
+			if (isPaused) {
+				drawPauseMenu();
+			}			
+			else if (gameOver) {
+				drawGameOver();
+			}			
+        }
+
+        function gameLoop() {
+			if (!gameOver) {
+				update();
+				draw();
+				requestAnimationFrame(gameLoop);
+			}
+			else
+				draw();
+        }
+		
+		function saveGame() {
+			gameSavedState = JSON.stringify({
+				mario, goomba, score, frameIndex, frameCounter, cameraX
+			});
+			localStorage.setItem('savedMarioGame', gameSavedState);
+			alert('Game Saved!');
+		}
+		
+		function loadGame() {
+			let savedData = localStorage.getItem('savedMarioGame');
+			if (savedData) {
+				let loadedState = JSON.parse(savedData);
+				mario = loadedState.mario;
+				goomba = loadedState.goomba;
+				score = loadedState.score;
+				frameIndex = loadedState.frameIndex;
+				frameCounter = loadedState.frameCounter;
+				cameraX = loadedState.cameraX;
+				alert('Game Loaded!');
+			} else {
+				alert('No saved game found!');
+			}
+		}		
+
+        gameLoop();
+    </script>
+</body>
+</html>
