@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <title>Mario Canvas Game</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: lightblue;
+        }
+		#game-container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+		}		
+    </style>
+</head>
+<body>
+	<div id="game-container"></div>
+    <script>
+		const config = {
+			type: Phaser.AUTO,
+			width: 800,
+			height: 400,
+			parent: 'game-container', // Attach to a div
+			backgroundColor: '#87ceeb',
+			physics: {
+				default: 'arcade',
+				arcade: {
+					gravity: { y: 500 }, // Menambahkan gravitasi ke bawah
+					debug: false // Tampilkan hitbox untuk debugging (ubah ke true jika perlu)
+				}
+			},
+			scene: {
+				preload,
+				create,
+				update
+			}
+		};
+
+		const game = new Phaser.Game(config);
+
+		let player;
+		let platforms;
+		let cursors;
+
+		function preload() {
+			// Membuat Mario dari bentuk sederhana (rectangle)
+			this.textures.generate('mario', { 
+				data: [' R ', 'BBB', 'BBB' , 'K K'], 
+				pixelWidth: 10,
+			    palette: {
+					R: '#FF0000', // Red
+					B: '#0000FF', // Blue
+					K: '#000000'  // Black
+				}
+			});
+
+			// Membuat platform dari warna coklat
+			this.textures.generate('ground', { 
+				data: ['NNNNNNNNNNNNNNNNNN'], 
+				pixelWidth: 80,
+			    palette: {
+					N: '#A52A2A' // Brown
+				}				
+			});
+			
+			// Membuat platform dari warna coklat
+			this.textures.generate('platform', { 
+				data: ['BBBBB'], 
+				pixelWidth: 20 
+			});
+			
+	        // **Load the tileset image (each tile is 16x16)**
+			this.load.image("tileset", "assets/mario-tiles.png"); // Change to your tileset image			
+		}
+
+		function create() {
+			// Expand world bounds to 1600px width
+			this.physics.world.setBounds(0, 0, 1600, 400);
+			
+			// Grup ground (statis)			
+			grounds = this.physics.add.staticGroup();
+			grounds.create(0, 400, 'ground').setScale(4, 1).refreshBody();
+			
+			// Grup platform (statis)			
+			platforms = this.physics.add.staticGroup();
+			p1=platforms.create(200, 280, 'platform').setScale(1, 0.5).refreshBody();
+			p2=platforms.create(400, 220, 'platform').setScale(1, 0.5).refreshBody();
+			p3=platforms.create(600, 220, 'platform').setScale(0.5, 0.5).refreshBody();
+			p4=platforms.create(1000, 280, 'platform').setScale(1, 0.5).refreshBody();
+			p5=platforms.create(1200, 220, 'platform').setScale(1, 0.5).refreshBody();
+
+			// Membuat karakter Mario
+			player = this.physics.add.sprite(50, 300, 'mario');
+			player.setCollideWorldBounds(true);
+			player.setBounce(0.2);
+			
+			// Menambahkan Mario agar bertabrakan dengan grounds
+			this.physics.add.collider(player, grounds);
+			
+			// Enable collision but only from above of platforms
+			// Disable downward collision for platforms
+			[p1, p2, p3, p4, p5].forEach(platform => platform.body.checkCollision.down = false);
+			this.physics.add.collider(player, platforms);
+			
+
+			// Menangani input keyboard
+			cursors = this.input.keyboard.createCursorKeys();
+
+			// Kamera mengikuti Mario
+			this.cameras.main.startFollow(player);
+			this.cameras.main.setBounds(0, 0, 1600, 400); // Sesuai panjang level
+		}
+
+		function update() {
+			// Reset kecepatan horizontal Mario
+			player.setVelocityX(0);
+
+			if (cursors.left.isDown) {
+				player.setVelocityX(-160); // Bergerak ke kiri
+			} else if (cursors.right.isDown) {
+				player.setVelocityX(160); // Bergerak ke kanan
+			}
+
+			// Lompat jika menyentuh tanah
+			if (cursors.space.isDown && player.body.touching.down) {
+				player.setVelocityY(-300);
+			}
+		}
+    </script>
+</body>
+</html>
